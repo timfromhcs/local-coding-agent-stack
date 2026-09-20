@@ -2,6 +2,7 @@
 # ==============================================================================
 # Local Coding Agent Stack — One-Line Automated Installer
 # Supported: Linux (x86_64, aarch64), macOS (Apple Silicon, Intel), Windows (WSL / Git Bash)
+# Can be run from any directory (auto-clones repository if not present).
 # ==============================================================================
 
 set -euo pipefail
@@ -19,6 +20,33 @@ log_err()  { echo "${RED}[ERROR]${RESET} $*" >&2; }
 echo "${BOLD}================================================================${RESET}"
 echo "${BOLD}       Local Coding Agent Stack — Unified Installer             ${RESET}"
 echo "${BOLD}================================================================${RESET}"
+
+# 0. Ensure Repository Directory
+REPO_DIR="$PWD"
+if [ ! -f "config/requirements.txt" ] || [ ! -f "src/proxy/server.py" ]; then
+  TARGET_DIR="$PWD/local-coding-agent-stack"
+  if [ -f "$TARGET_DIR/config/requirements.txt" ]; then
+    log_info "Using existing repository at $TARGET_DIR"
+    REPO_DIR="$TARGET_DIR"
+  else
+    log_warn "Repository not detected in current directory."
+    log_info "Cloning https://github.com/timfromhcs/local-coding-agent-stack.git into $TARGET_DIR..."
+    if command -v git >/dev/null 2>&1; then
+      git clone https://github.com/timfromhcs/local-coding-agent-stack.git "$TARGET_DIR"
+    else
+      log_warn "git not found, downloading repository ZIP..."
+      curl -fsSL https://github.com/timfromhcs/local-coding-agent-stack/archive/refs/heads/main.zip -o /tmp/repo.zip
+      unzip -q /tmp/repo.zip -d /tmp/
+      rm -rf "$TARGET_DIR"
+      mv /tmp/local-coding-agent-stack-main "$TARGET_DIR"
+      rm -f /tmp/repo.zip
+    fi
+    REPO_DIR="$TARGET_DIR"
+  fi
+  cd "$REPO_DIR"
+fi
+
+log_info "Working directory: $REPO_DIR"
 
 # 1. OS & Architecture Detection
 OS="$(uname -s)"
@@ -99,7 +127,7 @@ if [ ! -f "$MODEL_PATH" ]; then
     log_err "Download failed. Please place NeoHorse-1-4B.Q4_K_M.gguf into models/ manually."
   }
 else
-  log_info "Verified model weights: $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"
+  log_info "Verified model weights: $MODEL_PATH"
 fi
 
 # 7. Configure Claude Code Environment
@@ -119,9 +147,9 @@ EOF
 
 # 8. Complete
 echo "${BOLD}================================================================${RESET}"
-echo "${GREEN}${BOLD}Installation Complete!${RESET}"
+echo "${GREEN}${BOLD}Installation Complete! Stack is ready to run.${RESET}"
 echo ""
-echo "To launch the full local stack:"
+echo "To launch the full local stack in $REPO_DIR:"
 echo "  1. Start llama-server:  python scripts/run_llama_server.py"
 echo "  2. Start Proxy:         python -m src.proxy.server"
 echo "  3. Start RSI Daemon:    python -m src.rsi.daemon loop"
