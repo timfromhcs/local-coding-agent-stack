@@ -38,8 +38,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvulkan-dev vulkan-tools glslang-tools glslang-dev shaderc
-          glslc --version || true
+          sudo apt-get install -y libvulkan-dev vulkan-tools glslang-tools glslc
+          glslc --version
 
       - name: Install Windows Vulkan SDK
         if: runner.os == 'Windows'
