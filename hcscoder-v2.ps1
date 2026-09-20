@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-hcscoder-v2 — Autonomous Local Coding Assistant CLI
+hcscoder-v2 - Autonomous Local Coding Assistant CLI
 #>
 $ErrorActionPreference = "Continue"
 
@@ -56,10 +56,11 @@ if (-not $proxyOk) {
 }
 
 if ($args -contains "--gui" -or $args -contains "gui") {
-    Write-Host "[✓] Opening HCS Coder Web GUI at http://127.0.0.1:4000/gui ..." -ForegroundColor Green
+    Write-Host "[+] Opening HCS Coder Web GUI at http://127.0.0.1:4000/gui ..." -ForegroundColor Green
     Start-Process "http://127.0.0.1:4000/gui"
-    return
+    exit 0
 }
 
-# 3. Launch Claude Code in the current working directory
-& $BunExe $CliBundle $args
+# 3. Launch HCS Coder CLI in current directory
+& "$BunExe" "$CliBundle" @args
+exit $LASTEXITCODE

@@ -412,18 +412,21 @@
       inputEl.focus();
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      const targetBtn = btn || (tab === 'chat' ? document.querySelectorAll('.tab-btn')[0] : document.querySelectorAll('.tab-btn')[1]);
+      if (targetBtn) targetBtn.classList.add('active');
       if (tab === 'chat') {
         document.getElementById('chat-panel').style.display = 'flex';
         document.getElementById('rsi-panel').style.display = 'none';
-        event.target.classList.add('active');
       } else {
         document.getElementById('chat-panel').style.display = 'none';
         document.getElementById('rsi-panel').style.display = 'block';
-        event.target.classList.add('active');
         fetchRsiStatus();
       }
+    }
+    if (window.location.hash === '#rsi') {
+      switchTab('rsi');
     }
 
     function formatMarkdown(text) {

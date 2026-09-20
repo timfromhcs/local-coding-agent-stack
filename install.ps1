@@ -1,20 +1,25 @@
 <#
 .SYNOPSIS
-Local Coding Agent Stack — Windows Native PowerShell One-Line Installer
+Local Coding Agent Stack - Windows Native PowerShell One-Line Installer
 Supports execution from any directory (auto-clones repository if needed).
 #>
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "       Local Coding Agent Stack — Windows Native Installer      " -ForegroundColor Cyan
+Write-Host "       Local Coding Agent Stack - Windows Native Installer      " -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 
 # 1. Ensure Repository Directory
 $repoDir = $PWD.Path
-if (-not (Test-Path "config/requirements.txt") -or -not (Test-Path "src/proxy/server.py")) {
+if (Test-Path (Join-Path $PWD.Path "config\requirements.txt")) {
+    $repoDir = $PWD.Path
+} elseif (Test-Path "E:\AI\config\requirements.txt") {
+    $repoDir = "E:\AI"
+    Set-Location $repoDir
+} else {
     $targetDir = Join-Path $PWD.Path "local-coding-agent-stack"
-    if (Test-Path (Join-Path $targetDir "config/requirements.txt")) {
+    if (Test-Path (Join-Path $targetDir "config\requirements.txt")) {
         Write-Host "[+] Using existing repository at $targetDir" -ForegroundColor Green
         $repoDir = $targetDir
     } else {
@@ -36,6 +41,7 @@ if (-not (Test-Path "config/requirements.txt") -or -not (Test-Path "src/proxy/se
     }
     Set-Location $repoDir
 }
+[System.IO.Directory]::SetCurrentDirectory($repoDir)
 
 Write-Host "[+] Working directory: $repoDir" -ForegroundColor Green
 
@@ -69,8 +75,9 @@ Write-Host "[+] Bun version: $(bun --version)" -ForegroundColor Green
 
 # 5. Python Dependencies
 Write-Host "[+] Installing Python requirements from config/requirements.txt..." -ForegroundColor Green
+$reqFile = Join-Path $repoDir "config\requirements.txt"
 python -m pip install --upgrade pip
-python -m pip install -r config/requirements.txt
+python -m pip install -r "$reqFile"
 
 # 6. Inference Binaries (llama.cpp with Vulkan)
 $vulkanServer = Join-Path $repoDir "bin\llama-vulkan\llama-server.exe"

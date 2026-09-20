@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-hcscoder-gui — Launcher for HCS Coder v2 Web GUI
+hcscoder-gui - Launcher for HCS Coder v2 Web GUI
 #>
 $ErrorActionPreference = "Continue"
 $StackDir = "E:\AI"
@@ -43,5 +43,5 @@ if (-not $proxyOk) {
     }
 }
 
-Write-Host "[✓] Stack is live! Opening Web GUI in your default browser..." -ForegroundColor Green
+Write-Host "[+] Stack is live! Opening Web GUI in your default browser..." -ForegroundColor Green
 Start-Process "http://127.0.0.1:4000/gui"
