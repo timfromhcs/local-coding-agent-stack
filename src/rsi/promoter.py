@@ -12,7 +12,7 @@ import json
 import time
 import shutil
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Tuple, Optional, List
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 PROMOTION_LOG = PROJECT_ROOT / "rsi_data" / "promotions.jsonl"
