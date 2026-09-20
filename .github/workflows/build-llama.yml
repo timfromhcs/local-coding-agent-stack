@@ -54,6 +54,15 @@ jobs:
             }
           }
 
+      - name: Ensure llama.cpp source
+        shell: bash
+        run: |
+          if [ ! -d "llama-src" ] || [ ! -f "llama-src/CMakeLists.txt" ]; then
+            echo "[+] Cloning llama.cpp source repository..."
+            rm -rf llama-src
+            git clone --depth 1 https://github.com/ggerganov/llama.cpp.git llama-src
+          fi
+
       - name: Configure CMake
         run: |
           cmake -B build -S llama-src ${{ matrix.cmake_args }}
