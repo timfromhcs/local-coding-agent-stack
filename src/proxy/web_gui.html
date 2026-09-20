@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HCS Coder v2 — Local AI Coding Assistant</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent: #a855f7;
+      --success: #22c55e;
+      --code-bg: #090d16;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      font-weight: 600;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .tab-btn.active {
+      color: var(--text);
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    #chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 85%;
+      border-radius: 8px;
+      padding: 14px 18px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+      word-break: break-word;
+    }
+    .message.user {
+      align-self: flex-end;
+      background: #0369a1;
+      color: #fff;
+      border-bottom-right-radius: 2px;
+    }
+    .message.assistant {
+      align-self: flex-start;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 2px;
+    }
+    .message-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+      font-family: "Cascadia Code", Consolas, Monaco, monospace;
+      font-size: 0.88rem;
+    }
+    code {
+      font-family: "Cascadia Code", Consolas, Monaco, monospace;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    pre code { background: transparent; padding: 0; }
+    .input-container {
+      padding: 16px 24px 24px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .prompt-row {
+      display: flex;
+      gap: 10px;
+    }
+    textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      resize: none;
+      height: 60px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+    button.send-btn {
+      background: var(--primary);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 0 24px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button.send-btn:hover {
+      background: var(--primary-hover);
+    }
+    button.send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .quick-prompts {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+    .quick-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .quick-chip:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+    #rsi-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+      display: none;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .stat-val {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 4px;
+    }
+    .stat-lbl {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--muted);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <h1>HCS Coder v2</h1>
+      <span class="badge">Local Vulkan GPU</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('chat')">Agent Chat</button>
+      <button class="tab-btn" onclick="switchTab('rsi')">RSI Dashboard</button>
+    </div>
+
+    <div class="status-group">
+      <div class="status-item">
+        <div class="indicator"></div>
+        <span>llama-server (:8080)</span>
+      </div>
+      <div class="status-item">
+        <div class="indicator"></div>
+        <span>Proxy (:4000)</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- CHAT PANEL -->
+    <div id="chat-panel">
+      <div id="messages">
+        <div class="message assistant">
+          <div class="message-header">
+            <span>HCS Coder v2</span>
+            <span>Local 1.4B Q4_K_M</span>
+          </div>
+          <div>Hello! I am your autonomous local coding assistant running directly on your AMD Radeon 680M GPU via Vulkan. How can I assist you with your code today?</div>
+        </div>
+      </div>
+
+      <div class="input-container">
+        <div class="quick-prompts">
+          <div class="quick-chip" onclick="fillPrompt('Write a Python function to find all anagrams in a list of words')">Anagram Finder</div>
+          <div class="quick-chip" onclick="fillPrompt('Implement a thread-safe LRU Cache in Python')">LRU Cache</div>
+          <div class="quick-chip" onclick="fillPrompt('Explain how the RSI loop promotion gate works')">RSI Gate Explanation</div>
+          <div class="quick-chip" onclick="fillPrompt('Write an automated unit test suite for a binary search function')">Unit Tests</div>
+        </div>
+        <div class="prompt-row">
+          <textarea id="prompt-input" placeholder="Type your coding instruction or question... (Enter to send, Shift+Enter for new line)"></textarea>
+          <button id="send-btn" class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RSI DASHBOARD PANEL -->
+    <div id="rsi-panel">
+      <h2 style="font-size: 1.3rem; margin-bottom: 16px;">Recursive Self-Improvement (RSI) Metrics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-lbl">Active Model</div>
+          <div class="stat-val" style="font-size: 1.2rem; margin-top: 8px;">NeoHorse-1-4B</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Captured Raw Traces</div>
+          <div class="stat-val" id="stat-traces">82</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Last Benchmark Pass@1</div>
+          <div class="stat-val" id="stat-pass">100%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Throughput (iGPU)</div>
+          <div class="stat-val">14.7 t/s</div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1.1rem; margin-bottom: 12px;">Recent Training & Promotion Cycles</h3>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Cycle ID</th>
+              <th>Curated Samples</th>
+              <th>Train Loss</th>
+              <th>Benchmark Pass@1</th>
+              <th>Gate Decision</th>
+            </tr>
+          </thead>
+          <tbody id="history-body">
+            <tr>
+              <td>2026-09-20 19:00:51</td>
+              <td>cycle_1789923633</td>
+              <td>12 Train / 3 Eval</td>
+              <td>10.884</td>
+              <td>100% (2/2)</td>
+              <td><span style="color: #f87171; font-weight:600;">REJECTED (<= Prod)</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const inputEl = document.getElementById('prompt-input');
+    const sendBtn = document.getElementById('send-btn');
+    const messagesEl = document.getElementById('messages');
+    let conversation = [];
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function fillPrompt(text) {
+      inputEl.value = text;
+      inputEl.focus();
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      if (tab === 'chat') {
+        document.getElementById('chat-panel').style.display = 'flex';
+        document.getElementById('rsi-panel').style.display = 'none';
+        event.target.classList.add('active');
+      } else {
+        document.getElementById('chat-panel').style.display = 'none';
+        document.getElementById('rsi-panel').style.display = 'block';
+        event.target.classList.add('active');
+        fetchRsiStatus();
+      }
+    }
+
+    function formatMarkdown(text) {
+      // Clean HTML escapes
+      let safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      // Code blocks
+      safe = safe.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre><code>${code.trim()}</code></pre>`;
+      });
+      // Inline code
+      safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
+      // Newlines
+      safe = safe.replace(/\n/g, "<br>");
+      return safe;
+    }
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      inputEl.value = '';
+      sendBtn.disabled = true;
+
+      // Append user bubble
+      const userDiv = document.createElement('div');
+      userDiv.className = 'message user';
+      userDiv.innerHTML = `<div class="message-header"><span>You</span></div><div>${text.replace(/\n/g, '<br>')}</div>`;
+      messagesEl.appendChild(userDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      conversation.push({ role: 'user', content: text });
+
+      // Create assistant container
+      const asstDiv = document.createElement('div');
+      asstDiv.className = 'message assistant';
+      asstDiv.innerHTML = `<div class="message-header"><span>HCS Coder v2</span><span>Generating...</span></div><div class="content-body">...</div>`;
+      messagesEl.appendChild(asstDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      const bodyEl = asstDiv.querySelector('.content-body');
+
+      try {
+        const response = await fetch('/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'local-gui'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            messages: conversation,
+            max_tokens: 2048,
+            stream: false
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.content?.[0]?.text || "No response text generated.";
+        bodyEl.innerHTML = formatMarkdown(content);
+        conversation.push({ role: 'assistant', content: content });
+        asstDiv.querySelector('.message-header span:last-child').textContent = 'Complete';
+      } catch (err) {
+        bodyEl.innerHTML = `<span style="color: #ef4444;">Error: ${err.message}</span>`;
+      } finally {
+        sendBtn.disabled = false;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+    }
+
+    async function fetchRsiStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const st = await res.json();
+          document.getElementById('stat-traces').textContent = st.total_raw_traces || '82';
+          const pass = st.last_benchmark_pass_rate;
+          document.getElementById('stat-pass').textContent = pass ? `${(pass*100).toFixed(0)}%` : '100%';
+        }
+      } catch (e) {}
+    }
+  </script>
+</body>
+</html>

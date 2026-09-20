@@ -55,5 +55,11 @@ if (-not $proxyOk) {
     }
 }
 
+if ($args -contains "--gui" -or $args -contains "gui") {
+    Write-Host "[✓] Opening HCS Coder Web GUI at http://127.0.0.1:4000/gui ..." -ForegroundColor Green
+    Start-Process "http://127.0.0.1:4000/gui"
+    return
+}
+
 # 3. Launch Claude Code in the current working directory
 & $BunExe $CliBundle $args

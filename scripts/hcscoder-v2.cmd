@@ -32,5 +32,15 @@ if %ERRORLEVEL% NEQ 0 (
     powershell -NoProfile -ExecutionPolicy Bypass -Command "for ($i=0; $i -lt 15; $i++) { try { $r = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/health' -TimeoutSec 2; if ($r.status -eq 'ok') { exit 0 } } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
 )
 
+:: Check if user requested GUI
+if "%~1"=="--gui" goto open_gui
+if "%~1"=="gui" goto open_gui
+
 :: Run Claude Code CLI in current directory
 "%BUN_EXE%" "%CLI_BUNDLE%" %*
+exit /b %ERRORLEVEL%
+
+:open_gui
+echo [✓] Opening HCS Coder Web GUI at http://127.0.0.1:4000/gui ...
+start http://127.0.0.1:4000/gui
+exit /b 0

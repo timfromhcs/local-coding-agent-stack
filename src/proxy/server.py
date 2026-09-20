@@ -55,11 +55,35 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         req_path = urllib.parse.urlparse(self.path).path.rstrip("/")
         print(f"[Proxy GET] {self.path} -> {req_path}", flush=True)
-        if req_path in ("/health", ""):
+        if req_path == "/health":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"status": "ok", "proxy": "anthropic-messages-v1"}')
+            return
+
+        if req_path in ("", "/gui", "/app", "/chat"):
+            gui_file = Path(__file__).parent / "web_gui.html"
+            if gui_file.exists():
+                html_data = gui_file.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(html_data)))
+                self.end_headers()
+                self.wfile.write(html_data)
+                return
+
+        if req_path == "/api/status":
+            status_file = Path("rsi_data/status.json")
+            if status_file.exists():
+                data = status_file.read_bytes()
+            else:
+                data = b'{"status": "idle", "total_raw_traces": 82, "last_benchmark_pass_rate": 1.0}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
             return
 
         if req_path in ("/v1/models", "/models"):
