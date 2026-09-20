@@ -12,6 +12,11 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CLI_BUNDLE = PROJECT_ROOT / "claude-code-full" / "dist" / "cli.mjs"
 
+pytestmark = pytest.mark.skipif(
+    not CLI_BUNDLE.exists(),
+    reason="claude-code CLI bundle not built"
+)
+
 def get_bun_bin() -> str:
     bun_candidates = [
         Path(r"C:\Users\hcsme\AppData\Local\Microsoft\WinGet\Packages\OpenJS.NodeJS.22_Microsoft.Winget.Source_8wekyb3d8bbwe\node-v22.23.1-win-x64\node_modules\bun\bin\bun.exe"),

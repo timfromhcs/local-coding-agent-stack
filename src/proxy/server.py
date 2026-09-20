@@ -136,6 +136,7 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
             self.wfile.write(resp_bytes)
             return
 
+        os.makedirs("logs", exist_ok=True)
         with open("logs/proxy_requests.log", "a", encoding="utf-8") as f:
             f.write(f"POST {self.path} (req_path: {req_path})\n")
 

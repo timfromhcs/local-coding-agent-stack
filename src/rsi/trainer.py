@@ -11,22 +11,14 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
+
 try:
-    import torch
-    import torch.nn as nn
-    from torch.utils.data import Dataset, DataLoader
-    from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
     from peft import LoraConfig, get_peft_model
 except ImportError:
-    torch = None
-    nn = None
-    class Dataset:
-        pass
-    class DataLoader:
-        pass
-    AutoTokenizer = None
-    AutoConfig = None
-    AutoModelForCausalLM = None
     class LoraConfig:
         def __init__(self, *args, **kwargs):
             pass

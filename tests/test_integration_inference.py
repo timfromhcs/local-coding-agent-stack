@@ -10,6 +10,19 @@ import time
 
 LLAMA_URL = "http://127.0.0.1:8080"
 
+def _is_server_available():
+    try:
+        req = urllib.request.Request(f"{LLAMA_URL}/health")
+        with urllib.request.urlopen(req, timeout=1) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+pytestmark = pytest.mark.skipif(
+    not _is_server_available(),
+    reason="llama-server not running on http://127.0.0.1:8080"
+)
+
 def test_live_inference_health():
     """Verify live inference server is healthy and responding."""
     req = urllib.request.Request(f"{LLAMA_URL}/health")

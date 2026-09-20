@@ -10,6 +10,19 @@ import time
 
 PROXY_URL = "http://127.0.0.1:4000"
 
+def _is_proxy_available():
+    try:
+        req = urllib.request.Request(f"{PROXY_URL}/health")
+        with urllib.request.urlopen(req, timeout=1) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+pytestmark = pytest.mark.skipif(
+    not _is_proxy_available(),
+    reason="proxy server not running on http://127.0.0.1:4000"
+)
+
 def test_proxy_health():
     """Verify proxy server is alive and reports proxy status."""
     req = urllib.request.Request(f"{PROXY_URL}/health")
