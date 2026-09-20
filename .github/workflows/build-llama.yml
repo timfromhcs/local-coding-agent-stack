@@ -1,0 +1,74 @@
+name: Build llama.cpp Native Binaries
+
+on:
+  push:
+    paths:
+      - 'llama-src/**'
+      - '.github/workflows/build-llama.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build llama.cpp (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-vulkan
+            os: ubuntu-latest
+            cmake_args: -DGGML_VULKAN=ON -DCMAKE_BUILD_TYPE=Release
+            artifact_name: llama-linux-vulkan
+          - target: windows-vulkan
+            os: windows-latest
+            cmake_args: -DGGML_VULKAN=ON -DCMAKE_BUILD_TYPE=Release
+            artifact_name: llama-windows-vulkan
+          - target: macos-metal
+            os: macos-latest
+            cmake_args: -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release
+            artifact_name: llama-macos-metal
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux Vulkan SDK
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev vulkan-tools glslang-tools
+
+      - name: Install Windows Vulkan SDK
+        if: runner.os == 'Windows'
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: 1.3.275.0
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S llama-src ${{ matrix.cmake_args }}
+
+      - name: Build llama.cpp
+        run: |
+          cmake --build build --config Release -j --target llama-server llama-cli llama-quantize
+
+      - name: Package Artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp build/bin/Release/*.exe dist/ 2>/dev/null || cp build/bin/*.exe dist/ 2>/dev/null || true
+            cp build/bin/Release/*.dll dist/ 2>/dev/null || cp build/bin/*.dll dist/ 2>/dev/null || true
+          else
+            cp build/bin/llama-server dist/ 2>/dev/null || true
+            cp build/bin/llama-cli dist/ 2>/dev/null || true
+            cp build/bin/llama-quantize dist/ 2>/dev/null || true
+          fi
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/

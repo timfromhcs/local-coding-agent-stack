@@ -1,0 +1,14 @@
+--- a/src/utils/model/model.ts
++++ b/src/utils/model/model.ts
+@@ -34,7 +34,10 @@ export type ModelName = string
+ export type ModelSetting = ModelName | ModelAlias | null
+ 
+ export function getSmallFastModel(): ModelName {
+-  return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
++  if (!process.env.ANTHROPIC_SMALL_FAST_MODEL) {
++    throw new Error('ANTHROPIC_SMALL_FAST_MODEL is a mandatory environment variable for local agent operation.')
++  }
++  return process.env.ANTHROPIC_SMALL_FAST_MODEL
+ }
+ 
+ export function isNonCustomOpusModel(model: ModelName): boolean {

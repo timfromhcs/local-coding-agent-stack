@@ -1,0 +1,13 @@
+--- a/src/services/api/client.ts
++++ b/src/services/api/client.ts
+@@ -140,8 +140,8 @@ export async function getAnthropicClient({
+ 
+   const ARGS = {
+     defaultHeaders,
+-    maxRetries,
+-    timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
++    maxRetries: Math.max(5, parseInt(process.env.CLAUDE_CODE_RETRY_COUNT || String(maxRetries || 5), 10)),
++    timeout: parseInt(process.env.API_TIMEOUT_MS || String(120 * 1000), 10),
+     dangerouslyAllowBrowser: true,
+     fetchOptions: getProxyFetchOptions({
+       forAnthropicAPI: true,

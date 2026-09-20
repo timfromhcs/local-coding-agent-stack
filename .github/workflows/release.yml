@@ -1,0 +1,38 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Release Notes & Checksums
+        run: |
+          mkdir -p release-dist
+          tar -czf release-dist/local-coding-agent-stack-${{ github.ref_name }}.tar.gz \
+            --exclude='.git' \
+            --exclude='models/*.gguf' \
+            --exclude='bin' \
+            --exclude='node_modules' \
+            .
+          cd release-dist
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-dist/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true

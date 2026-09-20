@@ -48,8 +48,15 @@ models/*.safetensors
 
 # Build artifacts & llama.cpp
 build/
-llama.cpp/build/
-llama.cpp/bin/
+bin/
+llama-src/
+claude-code-src/
+claude-code-full/node_modules/
+claude-code-full/dist/
+test_sandbox/
+*.pid
+models/*.export_info.json
+models/.cache/
 *.exe
 *.dll
 *.lib
@@ -63,6 +70,9 @@ logs/
 *.log
 rsi_data/raw/
 rsi_data/curated/
+rsi_data/*.json
+rsi_data/*.jsonl
+!rsi_data/.gitkeep
 checkpoints/
 
 # System / IDE

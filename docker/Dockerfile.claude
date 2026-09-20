@@ -1,0 +1,14 @@
+FROM oven/bun:1.1-alpine
+
+WORKDIR /app
+
+COPY claude-code-full/dist /app/dist
+COPY claude-code-full/package.json /app/package.json
+
+ENV ANTHROPIC_BASE_URL=http://proxy:4000 \
+    ANTHROPIC_API_KEY=local-dev-key \
+    ANTHROPIC_MODEL=claude-3-5-sonnet-20241022 \
+    ANTHROPIC_SMALL_FAST_MODEL=claude-3-5-sonnet-20241022
+
+ENTRYPOINT ["bun", "/app/dist/cli.mjs"]
+CMD ["--bare", "--help"]

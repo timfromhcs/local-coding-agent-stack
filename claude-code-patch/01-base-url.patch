@@ -1,0 +1,37 @@
+--- a/src/services/api/client.ts
++++ b/src/services/api/client.ts
+@@ -299,15 +299,12 @@ export async function getAnthropicClient({
+ 
+   // Determine authentication method based on available tokens
+   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
+-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
++    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey() || process.env.ANTHROPIC_API_KEY || 'local-dummy-key',
+     authToken: isClaudeAISubscriber()
+       ? getClaudeAIOAuthTokens()?.accessToken
+       : undefined,
+-    // Set baseURL from OAuth config when using staging OAuth
+-    ...(process.env.USER_TYPE === 'ant' &&
+-    isEnvTruthy(process.env.USE_STAGING_OAUTH)
+-      ? { baseURL: getOauthConfig().BASE_API_URL }
+-      : {}),
++    // Set baseURL from environment or OAuth config
++    baseURL: process.env.ANTHROPIC_BASE_URL || (process.env.USER_TYPE === 'ant' && isEnvTruthy(process.env.USE_STAGING_OAUTH) ? getOauthConfig().BASE_API_URL : undefined),
+     ...ARGS,
+     ...(isDebugToStdErr() && { logger: createStderrLogger() }),
+   }
+--- a/src/utils/auth.ts
++++ b/src/utils/auth.ts
+@@ -232,6 +232,13 @@ export function getAnthropicApiKeyWithSource(
+   // --bare: hermetic auth. Only ANTHROPIC_API_KEY env or apiKeyHelper from
+   // the --settings flag. Never touches keychain, config file, or approval
+   // lists. 3P (Bedrock/Vertex/Foundry) uses provider creds, not this path.
++  if (process.env.ANTHROPIC_BASE_URL) {
++    return {
++      key: process.env.ANTHROPIC_API_KEY || 'local-dummy-key',
++      source: 'ANTHROPIC_API_KEY',
++    }
++  }
++
+   if (isBareMode()) {
+     if (process.env.ANTHROPIC_API_KEY) {
+       return { key: process.env.ANTHROPIC_API_KEY, source: 'ANTHROPIC_API_KEY' }

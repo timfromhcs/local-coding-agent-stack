@@ -1,0 +1,78 @@
+services:
+  llama-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.llama
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models
+    restart: unless-stopped
+    command:
+      - "-m"
+      - "/models/NeoHorse-1-4B.Q4_K_M.gguf"
+      - "-c"
+      - "32768"
+      - "-ngl"
+      - "99"
+      - "-ctk"
+      - "q8_0"
+      - "-ctv"
+      - "q8_0"
+      - "-fa"
+      - "on"
+      - "--spec-type"
+      - "ngram-mod"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  proxy:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.proxy
+    ports:
+      - "4000:4000"
+    environment:
+      - UPSTREAM_URL=http://llama-server:8080/v1/chat/completions
+      - PROXY_HOST=0.0.0.0
+      - PROXY_PORT=4000
+      - RSI_RAW_LOG_DIR=/app/rsi_data/raw
+    volumes:
+      - ./rsi_data:/app/rsi_data
+    depends_on:
+      llama-server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rsi-daemon:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.proxy
+    entrypoint: ["python", "-u", "-m", "src.rsi.daemon"]
+    command: ["loop", "--endpoint", "http://llama-server:8080", "--interval", "86400"]
+    volumes:
+      - ./rsi_data:/app/rsi_data
+      - ./checkpoints:/app/checkpoints
+      - ./models:/app/models
+    depends_on:
+      llama-server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  claude-cli:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.claude
+    environment:
+      - ANTHROPIC_BASE_URL=http://proxy:4000
+      - ANTHROPIC_API_KEY=local-dev-key
+      - ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+      - ANTHROPIC_SMALL_FAST_MODEL=claude-3-5-sonnet-20241022
+    depends_on:
+      proxy:
+        condition: service_started
+    profiles:
+      - cli

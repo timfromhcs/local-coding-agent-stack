@@ -1,0 +1,44 @@
+# Multi-stage Dockerfile for llama.cpp server with Vulkan/CPU support
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    libvulkan-dev \
+    vulkan-tools \
+    glslang-tools \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY llama-src /app/llama-src
+
+RUN cmake -B build -S llama-src \
+    -DGGML_VULKAN=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build --config Release -j$(nproc) --target llama-server llama-quantize
+
+FROM ubuntu:24.04 AS runner
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    libvulkan1 \
+    vulkan-tools \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app/build/bin/llama-server /usr/local/bin/llama-server
+COPY --from=builder /app/build/bin/llama-quantize /usr/local/bin/llama-quantize
+
+VOLUME ["/models"]
+EXPOSE 8080
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["llama-server", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["-m", "/models/model.gguf", "-c", "32768", "-ngl", "99", "-fa", "on"]

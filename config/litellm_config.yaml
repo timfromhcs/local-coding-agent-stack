@@ -1,0 +1,32 @@
+model_list:
+  - model_name: local-coding-agent
+    litellm_params:
+      model: openai/models/NeoHorse-1-4B.Q4_K_M.gguf
+      api_base: http://127.0.0.1:8080/v1
+      api_key: local-dummy-key
+
+  - model_name: claude-3-7-sonnet-20250219
+    litellm_params:
+      model: openai/models/NeoHorse-1-4B.Q4_K_M.gguf
+      api_base: http://127.0.0.1:8080/v1
+      api_key: local-dummy-key
+
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: openai/models/NeoHorse-1-4B.Q4_K_M.gguf
+      api_base: http://127.0.0.1:8080/v1
+      api_key: local-dummy-key
+
+  - model_name: claude-3-5-haiku-20241022
+    litellm_params:
+      model: openai/models/NeoHorse-1-4B.Q4_K_M.gguf
+      api_base: http://127.0.0.1:8080/v1
+      api_key: local-dummy-key
+
+general_settings:
+  master_key: local-dummy-key
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+  request_timeout: 120
