@@ -93,6 +93,7 @@ def main():
         "-c", str(args.ctx_size),
         "-t", str(args.threads),
         "-ngl", str(ngl),
+        "-np", "1",
         "-ctk", "q8_0",
         "-ctv", "q8_0",
         "-fa", "on",
