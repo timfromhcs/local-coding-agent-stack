@@ -81,9 +81,17 @@ def main():
         sys.exit(1)
 
     env = os.environ.copy()
-    env["GGML_VK_PREFER_HOST_MEMORY"] = "1"
 
     ngl = 0 if args.no_vulkan else args.ngl
+
+    device_args = []
+    if not args.no_vulkan:
+        try:
+            dev_check = subprocess.run([binary, "--list-devices"], capture_output=True, text=True, timeout=5)
+            if "Vulkan0" in dev_check.stdout:
+                device_args = ["-dev", "Vulkan0"]
+        except Exception:
+            pass
 
     cmd = [
         binary,
@@ -91,13 +99,15 @@ def main():
         "--host", args.host,
         "--port", str(args.port),
         "-c", str(args.ctx_size),
-        "-t", str(args.threads),
+        "-t", "8",
         "-ngl", str(ngl),
+    ] + device_args + [
+        "-b", "512",
+        "-ub", "128",
         "-np", "1",
         "-ctk", "q8_0",
         "-ctv", "q8_0",
         "-fa", "on",
-        "--spec-type", args.spec_type,
     ]
 
     print(f"Launching llama-server: {' '.join(cmd)}")

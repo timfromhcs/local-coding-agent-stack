@@ -306,6 +306,11 @@ async function main() {
       .replace(/\btypeof exports\s*==/g, '"undefined" ==')
       // lodash-es isBuffer.js: typeof module == "object" → false (ESM has no module global)
       .replace(/\btypeof module\s*==/g, '"undefined" ==')
+      // Patch React 19 useEffectEvent for Ink reconciler dispatcher
+      .replace(
+        /return\s+(?:resolveDispatcher\(\)|ReactSharedInternals\.H)\.useEffectEvent\(callback\);/g,
+        'var ref = exports2.useRef(callback); ref.current = callback; return exports2.useCallback(function() { return ref.current.apply(this, arguments); }, []);'
+      )
     wfs(outPath, bundleCode)
 
     // Write dist/package.json so runtimes that check package.json also see ESM.

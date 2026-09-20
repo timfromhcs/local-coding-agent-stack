@@ -124,6 +124,7 @@ if (-not (Test-Path $cliBundle)) {
     if (Test-Path (Join-Path $repoDir "claude-code-full")) {
         Write-Host "[+] Building Claude Code CLI bundle via Bun..." -ForegroundColor Green
         Push-Location (Join-Path $repoDir "claude-code-full")
+        bun install
         bun scripts/build-bundle.ts
         Pop-Location
     }

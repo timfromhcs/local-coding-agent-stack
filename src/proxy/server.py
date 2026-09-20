@@ -62,10 +62,13 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
         req_path = urllib.parse.urlparse(self.path).path.rstrip("/")
         print(f"[Proxy GET] {self.path} -> {req_path}", flush=True)
         if req_path == "/health":
+            resp_bytes = b'{"status": "ok", "proxy": "anthropic-messages-v1"}'
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(resp_bytes)))
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            self.wfile.write(b'{"status": "ok", "proxy": "anthropic-messages-v1"}')
+            self.wfile.write(resp_bytes)
             return
 
         if req_path in ("", "/gui", "/app", "/chat"):
@@ -173,7 +176,7 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
                 headers={"Content-Type": "application/json"}
             )
 
-            with urllib.request.urlopen(forward_req, timeout=180) as upstream_resp:
+            with urllib.request.urlopen(forward_req, timeout=600) as upstream_resp:
                 raw_resp = upstream_resp.read().decode("utf-8")
                 openai_json = json.loads(raw_resp)
 
@@ -219,7 +222,7 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
+        self.send_header("Connection", "close")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
 
@@ -298,6 +301,7 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
 
         # 4. message_stop
         self.send_sse_event("message_stop", {"type": "message_stop"})
+        self.close_connection = True
 
     def send_sse_event(self, event_type: str, data: Dict[str, Any]):
         msg = f"event: {event_type}\ndata: {json.dumps(data)}\n\n"

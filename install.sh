@@ -112,7 +112,7 @@ pip install -r config/requirements.txt
 # 5. Build Claude Code CLI bundle
 log_info "Compiling Claude Code CLI bundle..."
 if [ -d "claude-code-full" ]; then
-  (cd claude-code-full && bun scripts/build-bundle.ts)
+  (cd claude-code-full && bun install && bun scripts/build-bundle.ts)
 else
   log_warn "claude-code-full directory missing, skipping CLI build."
 fi
