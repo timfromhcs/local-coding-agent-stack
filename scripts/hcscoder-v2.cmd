@@ -8,13 +8,13 @@ if not exist "%BUN_EXE%" (
 )
 set "CLI_BUNDLE=%STACK_DIR%\claude-code-full\dist\cli.mjs"
 
-:: Environment variables for local stack
+REM  Environment variables for local stack
 set "ANTHROPIC_BASE_URL=http://127.0.0.1:4000"
 set "ANTHROPIC_API_KEY=local-key"
 set "ANTHROPIC_MODEL=claude-3-5-sonnet-20241022"
 set "ANTHROPIC_SMALL_FAST_MODEL=claude-3-5-sonnet-20241022"
 
-:: Check if llama-server (8080) is running
+REM  Check if llama-server (8080) is running
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-RestMethod -Uri 'http://127.0.0.1:8080/health' -TimeoutSec 2; if ($r.status -eq 'ok') { exit 0 } else { exit 1 } } catch { exit 1 }"
 if %ERRORLEVEL% NEQ 0 (
     echo [*] Starting llama-server on port 8080...
@@ -22,25 +22,25 @@ if %ERRORLEVEL% NEQ 0 (
     powershell -NoProfile -ExecutionPolicy Bypass -Command "for ($i=0; $i -lt 30; $i++) { try { $r = Invoke-RestMethod -Uri 'http://127.0.0.1:8080/health' -TimeoutSec 2; if ($r.status -eq 'ok') { exit 0 } } catch { Start-Sleep -Seconds 1 } }; exit 1"
 )
 
-:: Check if proxy (4000) is running
+REM  Check if proxy (4000) is running
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/health' -TimeoutSec 2; if ($r.status -eq 'ok') { exit 0 } else { exit 1 } } catch { exit 1 }"
 if %ERRORLEVEL% NEQ 0 (
     echo [*] Starting Anthropic proxy on port 4000...
     pushd "%STACK_DIR%"
-    start /B "" python -u -m src.proxy.server 127.0.0.1 4000
+    start /B "" python -u -m src.proxy.server 127.0.0.1 4000 > "%STACK_DIR%\logs\proxy.log" 2>&1
     popd
     powershell -NoProfile -ExecutionPolicy Bypass -Command "for ($i=0; $i -lt 15; $i++) { try { $r = Invoke-RestMethod -Uri 'http://127.0.0.1:4000/health' -TimeoutSec 2; if ($r.status -eq 'ok') { exit 0 } } catch { Start-Sleep -Milliseconds 500 } }; exit 1"
 )
 
-:: Check if user requested GUI
+REM  Check if user requested GUI
 if "%~1"=="--gui" goto open_gui
 if "%~1"=="gui" goto open_gui
 
-:: Run Claude Code CLI in current directory
+REM  Run Claude Code CLI in current directory
 "%BUN_EXE%" "%CLI_BUNDLE%" %*
 exit /b %ERRORLEVEL%
 
 :open_gui
-echo [✓] Opening HCS Coder Web GUI at http://127.0.0.1:4000/gui ...
+echo [+] Opening HCS Coder Web GUI at http://127.0.0.1:4000/gui ...
 start http://127.0.0.1:4000/gui
 exit /b 0

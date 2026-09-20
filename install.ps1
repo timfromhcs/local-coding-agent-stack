@@ -141,14 +141,22 @@ $settings = @{
 }
 $settings | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $claudeDir "settings.json") -Encoding UTF8
 
+# 10. Install Global Commands (WindowsApps)
+Write-Host "[+] Installing global hcscoder commands into PATH..." -ForegroundColor Green
+$winAppsDir = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps"
+if (Test-Path $winAppsDir) {
+    Copy-Item (Join-Path $repoDir "scripts\hcscoder*") -Destination $winAppsDir -Force
+    Write-Host "[+] Installed global commands in $winAppsDir" -ForegroundColor Green
+}
+
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "       Installation Complete! Stack is ready to run.            " -ForegroundColor Green
+Write-Host "       Installation Complete! HCS Coder v2 is ready to run.     " -ForegroundColor Green
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "To start the stack, open a terminal in $repoDir and run:" -ForegroundColor White
-Write-Host "  1. Start Inference Server:  python scripts\run_llama_server.py" -ForegroundColor Yellow
-Write-Host "  2. Start API Proxy:         python -m src.proxy.server" -ForegroundColor Yellow
-Write-Host "  3. Start RSI Daemon:        python -m src.rsi.daemon loop" -ForegroundColor Yellow
-Write-Host "  4. Run Claude Code Agent:   bun claude-code-full\dist\cli.mjs" -ForegroundColor Yellow
+Write-Host "You can now run HCS Coder from ANY folder in your terminal:" -ForegroundColor White
+Write-Host "  hcscoder          (Start interactive autonomous coding CLI)" -ForegroundColor Yellow
+Write-Host "  hcscoder-v2       (Alternative command alias)" -ForegroundColor Yellow
+Write-Host "  hcscoder --gui    (Open browser Web GUI & RSI Dashboard)" -ForegroundColor Yellow
+Write-Host "  hcscoder-gui      (Direct GUI launcher)" -ForegroundColor Yellow
 Write-Host "================================================================" -ForegroundColor Cyan

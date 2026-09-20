@@ -12,7 +12,7 @@ import time
 import uuid
 import urllib.request
 import urllib.error
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Dict, Any
 
@@ -50,6 +50,12 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
+        self.end_headers()
+
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Type", "application/json")
         self.end_headers()
 
     def do_GET(self):
@@ -300,8 +306,8 @@ class AnthropicProxyHandler(BaseHTTPRequestHandler):
 
 def run_server(host=PROXY_HOST, port=PROXY_PORT):
     server_address = (host, port)
-    httpd = HTTPServer(server_address, AnthropicProxyHandler)
-    print(f"Starting Anthropic Proxy server on http://{host}:{port} -> forwarding to {UPSTREAM_URL}")
+    httpd = ThreadingHTTPServer(server_address, AnthropicProxyHandler)
+    print(f"Starting Anthropic Proxy server on http://{host}:{port} -> forwarding to {UPSTREAM_URL}", flush=True)
     httpd.serve_forever()
 
 if __name__ == "__main__":

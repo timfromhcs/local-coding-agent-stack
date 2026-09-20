@@ -45,7 +45,7 @@ try {
 
 if (-not $proxyOk) {
     Write-Host "[*] Starting Anthropic translation proxy on port 4000..." -ForegroundColor Cyan
-    Start-Process -FilePath "python" -ArgumentList "-u -m src.proxy.server 127.0.0.1 4000" -WorkingDirectory $StackDir -WindowStyle Hidden
+    Start-Process -FilePath "python" -ArgumentList @("-u", "-m", "src.proxy.server", "127.0.0.1", "4000") -WorkingDirectory $StackDir -WindowStyle Hidden
     for ($i = 0; $i -lt 15; $i++) {
         Start-Sleep -Milliseconds 500
         try {
