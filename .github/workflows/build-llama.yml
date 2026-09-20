@@ -42,9 +42,17 @@ jobs:
 
       - name: Install Windows Vulkan SDK
         if: runner.os == 'Windows'
-        uses: humbletim/setup-vulkan-sdk@v1.2.0
-        with:
-          vulkan-query-version: 1.3.275.0
+        shell: powershell
+        run: |
+          choco install vulkan-sdk -y --no-progress
+          $vulkanPath = "C:\VulkanSDK"
+          if (Test-Path $vulkanPath) {
+            $latest = Get-ChildItem $vulkanPath | Sort-Object Name -Descending | Select-Object -First 1
+            if ($latest) {
+              echo "VULKAN_SDK=$($latest.FullName)" >> $env:GITHUB_ENV
+              echo "$($latest.FullName)\bin" >> $env:GITHUB_PATH
+            }
+          }
 
       - name: Configure CMake
         run: |
