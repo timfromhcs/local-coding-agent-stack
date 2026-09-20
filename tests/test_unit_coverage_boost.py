@@ -212,3 +212,203 @@ def test_daemon_run_rsi_cycle(tmp_path, monkeypatch):
     assert "cycle_id" in res_cycle
     assert res_cycle["decision"] in ("PROMOTED", "REJECTED")
 
+def test_benchmark_code_execution_cases():
+    # 1. Missing function
+    ok, err = bench_mod.execute_code_safely("a = 1", "func", [])
+    assert not ok
+    assert "not defined" in err
+
+    # 2. Syntax error
+    ok, err = bench_mod.execute_code_safely("def func(: pass", "func", [])
+    assert not ok
+
+    # 3. Runtime error
+    ok, err = bench_mod.execute_code_safely("def func(): return 1/0", "func", [])
+    assert not ok
+    assert "division by zero" in err
+
+    # 4. Successful execution
+    ok, res = bench_mod.execute_code_safely("def add(a, b): return a + b", "add", [2, 3])
+    assert ok
+    assert res == 5
+
+def test_benchmark_extract_code_formats():
+    assert bench_mod.extract_code_block("```python\nprint(1)\n```") == "print(1)"
+    assert bench_mod.extract_code_block("```\nprint(2)\n```") == "print(2)"
+    assert bench_mod.extract_code_block("print(3)") == "print(3)"
+
+def test_benchmark_run_task_mocked(monkeypatch):
+    task = bench_mod.BenchmarkTask(
+        task_id="test-01",
+        name="Test Task",
+        category="test",
+        prompt="Write func",
+        function_name="add",
+        test_cases=[{"args": [1, 2], "expected": 3}]
+    )
+
+    class MockResp:
+        def __init__(self, data):
+            self.data = data
+        def read(self):
+            return json.dumps(self.data).encode("utf-8")
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    # Success case
+    def mock_urlopen_success(req, timeout=30):
+        return MockResp({
+            "choices": [{"message": {"content": "```python\ndef add(a, b):\n    return a + b\n```"}}],
+            "usage": {"completion_tokens": 12}
+        })
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_success)
+    res = bench_mod.run_task("http://mock-url", task)
+    assert res["passed"] is True
+    assert res["tokens"] == 12
+
+    # Failure case in code result
+    def mock_urlopen_wrong(req, timeout=30):
+        return MockResp({
+            "choices": [{"message": {"content": "```python\ndef add(a, b):\n    return a - b\n```"}}],
+            "usage": {"completion_tokens": 12}
+        })
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_wrong)
+    res_wrong = bench_mod.run_task("http://mock-url", task)
+    assert res_wrong["passed"] is False
+
+    # HTTP Error case
+    def mock_urlopen_fail(req, timeout=30):
+        raise urllib.error.URLError("Connection error")
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_fail)
+    res_err = bench_mod.run_task("http://mock-url", task)
+    assert res_err["passed"] is False
+    assert "Request failed" in res_err["error"]
+
+def test_export_checkpoint_with_metadata(tmp_path):
+    ckpt = tmp_path / "ckpt"
+    ckpt.mkdir()
+    meta_file = ckpt / "training_meta.json"
+    with open(meta_file, "w", encoding="utf-8") as f:
+        json.dump({"loss": 0.42, "epochs": 2}, f)
+
+    out_gguf = tmp_path / "model.gguf"
+    res = export_mod.export_checkpoint_to_gguf(ckpt, out_gguf)
+    assert res["status"] == "success"
+    assert res["meta"]["loss"] == 0.42
+    assert (tmp_path / "model.export_info.json").exists()
+
+def test_export_quantize_mocked(tmp_path, monkeypatch):
+    quant_exe = tmp_path / "llama-quantize.exe"
+    quant_exe.write_text("dummy")
+    input_gguf = tmp_path / "input.gguf"
+    input_gguf.write_text("input")
+    output_gguf = tmp_path / "output.gguf"
+
+    monkeypatch.setattr(export_mod, "QUANTIZE_EXE", quant_exe)
+
+    import subprocess
+    class MockProc:
+        returncode = 0
+        stdout = "Quantization complete"
+        stderr = ""
+
+    monkeypatch.setattr(subprocess, "run", lambda cmd, capture_output, text: MockProc())
+    res = export_mod.quantize_gguf(input_gguf, output_gguf, "Q4_K_M")
+    assert res["status"] == "success"
+    assert res["quant_type"] == "Q4_K_M"
+
+    # Quantization failure case
+    class MockFailProc:
+        returncode = 1
+        stdout = ""
+        stderr = "Quantization failed"
+
+    monkeypatch.setattr(subprocess, "run", lambda cmd, capture_output, text: MockFailProc())
+    with pytest.raises(RuntimeError):
+        export_mod.quantize_gguf(input_gguf, output_gguf, "Q4_K_M")
+
+def test_proxy_server_extended_routes(tmp_path, monkeypatch):
+    class FakeStream:
+        def __init__(self):
+            self.data = bytearray()
+        def write(self, b):
+            self.data.extend(b)
+        def flush(self):
+            pass
+
+    class DummyHandler(proxy_srv.AnthropicProxyHandler):
+        def __init__(self, path="/gui", method="GET", rfile_data=b""):
+            self.path = path
+            self.command = method
+            self.headers = {"Content-Length": str(len(rfile_data))}
+            self.rfile = io.BytesIO(rfile_data)
+            self.wfile = FakeStream()
+            self.headers_sent = []
+            self.response_code = None
+
+        def send_response(self, code, message=None):
+            self.response_code = code
+
+        def send_header(self, keyword, value):
+            self.headers_sent.append((keyword, value))
+
+        def end_headers(self):
+            pass
+
+    # HEAD
+    h_head = DummyHandler("/", "HEAD")
+    h_head.do_HEAD()
+    assert h_head.response_code == 200
+
+    # GET /gui
+    h_gui = DummyHandler("/gui", "GET")
+    h_gui.do_GET()
+    assert h_gui.response_code == 200
+    assert b"<!DOCTYPE html>" in h_gui.wfile.data or b"<html" in h_gui.wfile.data
+
+    # GET /api/status
+    h_status = DummyHandler("/api/status", "GET")
+    h_status.do_GET()
+    assert h_status.response_code == 200
+    assert b"total_raw_traces" in h_status.wfile.data
+
+    # POST invalid json
+    h_inv = DummyHandler("/v1/messages", "POST", b"invalid-json")
+    h_inv.do_POST()
+    assert h_inv.response_code == 400
+
+    # POST with mock upstream success
+    class MockResp:
+        def read(self):
+            return json.dumps({
+                "choices": [{
+                    "message": {
+                        "content": "Hello world"
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 3}
+            }).encode("utf-8")
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=600: MockResp())
+    post_body = json.dumps({
+        "model": "claude-3-5-sonnet-20241022",
+        "messages": [{"role": "user", "content": "Hi"}],
+        "stream": False
+    }).encode("utf-8")
+
+    h_post = DummyHandler("/v1/messages", "POST", post_body)
+    h_post.do_POST()
+    assert h_post.response_code == 200
+    assert b"Hello world" in h_post.wfile.data
+
+
