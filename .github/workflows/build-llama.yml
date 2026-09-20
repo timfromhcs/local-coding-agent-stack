@@ -40,6 +40,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libvulkan-dev vulkan-tools glslang-tools glslc
           glslc --version
+          echo "[+] Installing SPIRV-Headers for Vulkan CMake..."
+          git clone --depth 1 https://github.com/KhronosGroup/SPIRV-Headers.git /tmp/spirv-headers
+          cmake -B /tmp/spirv-headers/build -S /tmp/spirv-headers -DCMAKE_INSTALL_PREFIX=/usr/local
+          sudo cmake --install /tmp/spirv-headers/build
 
       - name: Install Windows Vulkan SDK
         if: runner.os == 'Windows'
