@@ -145,15 +145,48 @@ cat << 'EOF' > "$HOME/.claude/settings.json"
 }
 EOF
 
-# 8. Complete
+# 8. Install Global Commands
+mkdir -p "$HOME/.local/bin"
+cat << 'EOF' > "$HOME/.local/bin/hcscoder"
+#!/usr/bin/env bash
+REPO_DIR="%%REPO_DIR%%"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:4000"
+export ANTHROPIC_API_KEY="local-key"
+export ANTHROPIC_MODEL="claude-3-5-sonnet-20241022"
+
+if ! curl -s "http://127.0.0.1:8080/health" | grep -q '"ok"'; then
+  echo "[*] Starting local llama-server in background..."
+  (cd "$REPO_DIR" && python3 scripts/run_llama_server.py) >/dev/null 2>&1 &
+  sleep 2
+fi
+
+if ! curl -s "http://127.0.0.1:4000/health" | grep -q '"ok"'; then
+  echo "[*] Starting translation proxy in background..."
+  (cd "$REPO_DIR" && python3 -m src.proxy.server 127.0.0.1 4000) >/dev/null 2>&1 &
+  sleep 1
+fi
+
+if [[ "$*" == *"--gui"* ]]; then
+  echo "[+] Opening HCS Coder GUI at http://127.0.0.1:4000/gui"
+  xdg-open "http://127.0.0.1:4000/gui" 2>/dev/null || open "http://127.0.0.1:4000/gui" 2>/dev/null || true
+  exit 0
+fi
+
+bun "$REPO_DIR/claude-code-full/dist/cli.mjs" "$@"
+EOF
+sed -i.bak "s|%%REPO_DIR%%|$REPO_DIR|g" "$HOME/.local/bin/hcscoder" && rm -f "$HOME/.local/bin/hcscoder.bak"
+chmod +x "$HOME/.local/bin/hcscoder"
+ln -sf "$HOME/.local/bin/hcscoder" "$HOME/.local/bin/hcscoder-v2"
+
+# 9. Complete
 echo "${BOLD}================================================================${RESET}"
-echo "${GREEN}${BOLD}Installation Complete! Stack is ready to run.${RESET}"
-echo ""
-echo "To launch the full local stack in $REPO_DIR:"
-echo "  1. Start llama-server:  python scripts/run_llama_server.py"
-echo "  2. Start Proxy:         python -m src.proxy.server"
-echo "  3. Start RSI Daemon:    python -m src.rsi.daemon loop"
-echo "  4. Run Claude Code:     bun claude-code-full/dist/cli.mjs"
-echo ""
-echo "Or via Docker Compose:    docker compose up -d"
+echo "${GREEN}${BOLD}Installation Complete! HCS Coder is ready to run.${RESET}"
 echo "${BOLD}================================================================${RESET}"
+echo ""
+echo "You can now run HCS Coder from ANY directory in your terminal:"
+echo "  hcscoder          (Start interactive autonomous coding CLI)"
+echo "  hcscoder -p '...' (Direct non-interactive execution)"
+echo "  hcscoder --gui    (Open browser Web GUI & RSI Dashboard)"
+echo "  hcscoder-v2       (Alternative command alias)"
+echo "${BOLD}================================================================${RESET}"
+
