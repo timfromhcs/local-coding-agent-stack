@@ -59,3 +59,4 @@ jobs:
         with:
           name: coverage-report-${{ matrix.os }}-${{ matrix.python-version }}
           path: .coverage
+          if-no-files-found: ignore
