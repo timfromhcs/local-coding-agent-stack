@@ -38,7 +38,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvulkan-dev vulkan-tools glslang-tools
+          sudo apt-get install -y libvulkan-dev vulkan-tools glslang-tools glslang-dev shaderc
+          glslc --version || true
 
       - name: Install Windows Vulkan SDK
         if: runner.os == 'Windows'
@@ -76,13 +77,17 @@ jobs:
         run: |
           mkdir -p dist
           if [ "${{ runner.os }}" = "Windows" ]; then
+            find build/bin -type f \( -name "*.exe" -o -name "*.dll" \) -exec cp {} dist/ \; 2>/dev/null || true
             cp build/bin/Release/*.exe dist/ 2>/dev/null || cp build/bin/*.exe dist/ 2>/dev/null || true
             cp build/bin/Release/*.dll dist/ 2>/dev/null || cp build/bin/*.dll dist/ 2>/dev/null || true
           else
+            find build/bin -type f \( -name "llama-server*" -o -name "llama-cli*" -o -name "llama-quantize*" -o -name "*.so*" -o -name "*.dylib" \) -exec cp {} dist/ \; 2>/dev/null || true
             cp build/bin/llama-server dist/ 2>/dev/null || true
             cp build/bin/llama-cli dist/ 2>/dev/null || true
             cp build/bin/llama-quantize dist/ 2>/dev/null || true
           fi
+          echo "=== Packaged Files in dist/ ==="
+          ls -la dist/
 
       - name: Upload Binaries
         uses: actions/upload-artifact@v4
